@@ -1,0 +1,16 @@
+{
+  "name": "narvideo",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "peerjs": "^1.5.2",
+    "@fortawesome/fontawesome-free": "^6.5.1"
+  }
+}

@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>NarVideo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1a1a1a;
+      color: white;
+    }
+
+    .top-bar {
+      background: linear-gradient(to right, rgba(45, 45, 45, 0.98), rgba(35, 35, 35, 0.98));
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%) translateY(0);
+      z-index: 1000;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(5px);
+      width: auto;
+      max-width: 90%;
+      transition: transform 0.3s ease-in-out;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .top-bar.hidden {
+      transform: translateX(-50%) translateY(-120%);
+    }
+
+    .hover-area {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      z-index: 999;
+    }
+
+    .top-bar-logo {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-logo {
+      height: 28px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .url-input {
+      width: 300px;
+      padding: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      background-color: rgba(25, 25, 25, 0.8);
+      color: white;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+
+    .url-input::placeholder {
+      color: #888;
+    }
+
+    .url-input:focus {
+      border-color: rgba(255, 68, 68, 0.5);
+      box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.2);
+      background: rgba(35, 35, 35, 0.9);
+    }
+
+    .play-button {
+      background: linear-gradient(45deg, rgba(255, 68, 68, 0.9), rgba(255, 107, 107, 0.9));
+      transition: all 0.2s ease;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    .play-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 68, 68, 0.2);
+      background: linear-gradient(45deg, rgba(255, 107, 107, 0.9), rgba(255, 68, 68, 0.9));
+    }
+
+    .play-button:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 6px rgba(255, 68, 68, 0.2);
+    }
+
+    .room-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      background-color: rgba(61, 61, 61, 0.8);
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .room-info i {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+    }
+
+    .room-id {
+      font-weight: bold;
+      color: #ff4444;
+    }
+
+    .copy-button {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      background-color: rgba(76, 175, 80, 0.9);
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .video-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: calc(100% - 300px);
+      height: 100vh;
+      background-color: #000;
+    }
+
+    #player {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    #player.active {
+      opacity: 1;
+    }
+
+    #joinInput {
+      width: 80px;
+    }
+
+    .chat-panel {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 300px;
+      min-width: 200px;
+      max-width: 600px;
+      height: 100vh;
+      background: linear-gradient(to right, rgba(35, 35, 35, 0.95), rgba(25, 25, 25, 0.95));
+      backdrop-filter: blur(5px);
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+      box-shadow: -4px 0 15px rgba(0, 0, 0, 0.2);
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .chat-resize-handle {
+      position: absolute;
+      left: -5px;
+      top: 0;
+      width: 10px;
+      height: 100%;
+      cursor: ew-resize;
+      background-color: transparent;
+      transition: background-color 0.3s;
+    }
+
+    .chat-resize-handle.hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .chat-messages {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column-reverse;
+    }
+
+    .chat-input-area {
+      padding: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 8px;
+      position: relative;
+    }
+
+    .chat-input {
+      flex: 1;
+      background-color: rgba(61, 61, 61, 0.8);
+      border: none;
+      border-radius: 4px;
+      padding: 8px;
+      color: white;
+      font-size: 13px;
+    }
+
+    .chat-input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .emoji-button {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      padding: 8px;
+      font-size: 16px;
+      transition: color 0.2s;
+    }
+
+    .emoji-button:hover {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .chat-message {
+      margin-bottom: 8px;
+      animation: slideIn 0.3s ease-out;
+      background: rgba(45, 45, 45, 0.3);
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: transform 0.2s ease;
+    }
+
+    .chat-message:hover {
+      transform: translateX(4px);
+      background: rgba(45, 45, 45, 0.4);
+    }
+
+    .chat-message .sender {
+      color: #ff4444;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    .chat-message .time {
+      color: #888;
+      font-size: 11px;
+      margin-right: 8px;
+    }
+
+    .chat-message .content {
+      color: white;
+      word-break: break-word;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    /* Video container'ı dinamik olarak ayarla */
+    .video-container {
+      width: calc(100% - var(--chat-width, 300px));
+      transition: width 0.1s;
+    }
+
+    /* Sistem mesajları için yeni stil */
+    .chat-message.system {
+      text-align: center;
+      padding: 5px 0;
+    }
+
+    .chat-message.system .content {
+      color: rgba(255, 255, 255, 0.5);
+      font-style: italic;
+      font-size: 12px;
+    }
+
+    .chat-header {
+      padding: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-logo {
+      height: 45px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .username-input {
+      flex-grow: 1;
+      background-color: rgba(61, 61, 61, 0.8);
+      border: none;
+      border-radius: 4px;
+      padding: 8px;
+      color: white;
+      font-size: 13px;
+    }
+
+    .color-picker {
+      width: 40px;
+      height: 30px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      background: none;
+      cursor: pointer;
+    }
+
+    .color-picker::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    .color-picker::-webkit-color-swatch {
+      border: none;
+      border-radius: 4px;
+    }
+
+    .chat-message .sender {
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    /* Chat mode toggle butonları */
+    .chat-mode-toggles {
+      margin-left: 10px;
+    }
+
+    .mode-toggle {
+      position: relative;
+      display: inline-block;
+    }
+
+    .mode-toggle-input {
+      display: none;
+    }
+
+    .mode-toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .mode-icon {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      transition: color 0.2s ease;
+    }
+
+    .mode-icon.left {
+      color: #ff4444;
+    }
+
+    .mode-toggle-input:checked ~ .mode-toggle-label .mode-icon.left {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .mode-toggle-input:checked ~ .mode-toggle-label .mode-icon.right {
+      color: #ff4444;
+    }
+
+    .toggle-track {
+      width: 44px;
+      height: 24px;
+      padding: 2px;
+      background-color: rgba(61, 61, 61, 0.8);
+      border-radius: 12px;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-indicator {
+      width: 20px;
+      height: 20px;
+      background-color: #ff4444;
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 2px;
+      transform: translateY(-50%);
+      transition: transform 0.2s ease;
+    }
+
+    /* Toggle durumları */
+    .mode-toggle-input:checked + .mode-toggle-label .toggle-track {
+      background-color: rgba(81, 81, 81, 0.8);
+    }
+
+    .mode-toggle-input:checked + .mode-toggle-label .toggle-indicator {
+      transform: translate(20px, -50%);
+    }
+
+    /* Hover efekti */
+    .toggle-track:hover {
+      background-color: rgba(81, 81, 81, 0.8);
+    }
+
+    /* Overlay chat paneli */
+    .chat-panel-overlay {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      width: 300px;
+      background: transparent;
+      border-radius: 8px;
+      display: none;
+      z-index: 1000;
+      transition: all 0.3s ease;
+      opacity: 0;
+    }
+
+    .chat-panel-overlay.active {
+      display: block;
+      opacity: 1;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .chat-panel-overlay.visible {
+      opacity: 1;
+    }
+
+    .overlay-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-messages-overlay {
+      max-height: 400px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
+      margin-bottom: 10px;
+      scrollbar-width: none; /* Firefox için */
+      -ms-overflow-style: none; /* IE ve Edge için */
+    }
+
+    /* Webkit (Chrome, Safari) için scroll bar'ı gizle */
+    .chat-messages-overlay::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chat-input-area-overlay {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: linear-gradient(to right, rgba(35, 35, 35, 0.95), rgba(25, 25, 25, 0.95));
+      backdrop-filter: blur(5px);
+      padding: 8px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .chat-input-area-overlay input {
+      flex: 1;
+    }
+
+    .chat-panel-overlay .chat-message {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      color: white;
+    }
+
+    .control-buttons {
+      display: flex;
+      gap: 6px;
+      margin-left: 4px;
+    }
+
+    .control-button {
+      background: rgba(45, 45, 45, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      color: white;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .control-button:hover {
+      transform: translateY(-1px);
+      background: rgba(55, 55, 55, 0.9);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .control-button.active {
+      background: linear-gradient(45deg, #ff4444, #ff6b6b);
+      animation: pulse 2s infinite;
+    }
+
+    .button-icon {
+      font-size: 16px;
+    }
+
+    .name-change-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .name-change-popup {
+      position: absolute;
+      left: calc(100% + 8px);
+      top: 50%;
+      transform: translateY(-50%) scaleX(0);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(35, 35, 35, 0.98);
+      padding: 6px;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      transform-origin: left;
+      transition: transform 0.2s ease;
+      z-index: 1001;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      height: 30px;
+      box-sizing: border-box;
+    }
+
+    .name-change-popup.active {
+      transform: translateY(-50%) scaleX(1);
+    }
+
+    .name-input {
+      width: 150px;
+      padding: 4px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      background: rgba(45, 45, 45, 0.98);
+      color: white;
+      font-size: 13px;
+      transition: border-color 0.2s;
+      height: 100%;
+    }
+
+    .name-input:focus {
+      outline: none;
+      border-color: rgba(255, 68, 68, 0.5);
+    }
+
+    .name-input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .confirm-button {
+      background: rgba(76, 175, 80, 0.9);
+      border: none;
+      border-radius: 4px;
+      color: white;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .confirm-button:hover {
+      background: rgba(76, 175, 80, 1);
+      transform: scale(1.05);
+    }
+
+    .confirm-button:active {
+      transform: scale(0.95);
+    }
+
+    .confirm-button i {
+      font-size: 14px;
+    }
+
+    /* Video placeholder stilleri */
+    .video-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 1;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .video-placeholder i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: pulse 3s infinite;
+      color: rgba(255, 68, 68, 0.7);
+    }
+
+    .video-placeholder p {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    /* Chat panel'in diğer stillerini güncelle */
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-messages {
+      flex: 1;
+      min-height: 0; /* Önemli: Scrolling için gerekli */
+    }
+
+    .emoji-picker-container {
+      position: absolute;
+      bottom: 100%;
+      right: 15px;
+      background: linear-gradient(to bottom, rgba(45, 45, 45, 0.98), rgba(35, 35, 35, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px;
+      display: none;
+      z-index: 9999;
+      max-width: 300px;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .emoji-picker-container.visible {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 5px;
+    }
+
+    .emoji-item {
+      cursor: pointer;
+      padding: 5px;
+      text-align: center;
+      transition: all 0.2s ease;
+      border-radius: 4px;
+    }
+
+    .emoji-item:hover {
+      transform: scale(1.2);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Scroll bar özelleştirmesi */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 68, 68, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 68, 68, 0.5);
+    }
+
+    /* Mobil cihazlar için medya sorguları */
+    @media (max-width: 768px) {
+        .top-bar {
+            flex-wrap: wrap;
+            padding: 8px;
+            gap: 8px;
+        }
+
+        .url-input {
+            width: 100%;
+            order: 2;
+        }
+
+        .control-buttons {
+            width: 100%;
+            justify-content: center;
+            order: 3;
+        }
+
+        .video-container {
+            width: 100% !important;
+            height: calc(100vh - 60px);
+            top: 60px;
+        }
+
+        .chat-panel {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            width: 100%;
+            height: 50vh;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .chat-panel.active {
+            transform: translateY(0);
+        }
+
+        .chat-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1001;
+            padding: 12px 24px;
+            border-radius: 24px;
+            background: rgba(255, 68, 68, 0.9);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-panel-overlay {
+            width: 100%;
+            left: 0;
+            bottom: 0;
+        }
+
+        .chat-input-area-overlay {
+            padding: 12px;
+        }
+    }
+
+    /* Touch olayları için iyileştirmeler */
+    @media (hover: none) {
+        .control-button:hover {
+            transform: none;
+        }
+
+        .emoji-item {
+            padding: 10px;
+        }
+
+        .chat-resize-handle {
+            display: none;
+        }
+    }
+  </style>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <div class="hover-area"></div>
+  <div class="top-bar" id="topBar">
+    <div class="top-bar-logo">
+        <img src="logo2.png" alt="NarVideo Logo" class="nav-logo">
+    </div>
+    <input type="text" class="url-input" id="videoUrl" placeholder="YouTube video URL'sini yapıştır">
+    <button class="play-button" id="loadVideo">
+        <i class="fa-solid fa-play"></i>
+        <span>Başlat</span>
+    </button>
+    <div class="room-info">
+        <i class="fa-solid fa-users"></i>
+        <span class="room-id" id="roomId">Bağlanıyor...</span>
+    </div>
+    <div class="control-buttons">
+        <button class="control-button" id="toggleTimeButton" title="Saat Gösterimini Aç/Kapat">
+            <i class="fa-regular fa-clock"></i>
+        </button>
+        <button class="control-button" id="chatModeButton" title="Chat Modunu Değiştir">
+            <i class="fa-solid fa-message"></i>
+        </button>
+        <div class="name-change-container">
+            <button class="control-button" id="changeNameButton" title="İsim Değiştir">
+                <i class="fa-solid fa-user-pen"></i>
+            </button>
+            <div class="name-change-popup">
+                <input type="text" class="name-input" id="newNameInput" placeholder="Yeni isminiz...">
+                <button class="confirm-button" id="confirmNameButton">
+                    <i class="fa-solid fa-check"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <div class="video-container">
+    <div class="video-placeholder" id="videoPlaceholder">
+        <i class="fa-solid fa-film"></i>
+        <p>Video URL'si girerek başlayın</p>
+    </div>
+    <div id="player"></div>
+  </div>
+
+  <button class="chat-toggle" id="chatToggle">Chat</button>
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-resize-handle" id="chatResizeHandle"></div>
+    <div class="chat-header">
+        <img src="logo.png" alt="NarVideo Logo" class="chat-logo">
+    </div>
+    <div class="chat-messages" id="chatMessages">
+        <!-- Mesajlar buraya eklenecek -->
+    </div>
+    <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Mesajınızı yazın...">
+        <button class="emoji-button" id="emojiButton">
+            <i class="fa-regular fa-face-smile"></i>
+        </button>
+        <div class="emoji-picker-container" id="emojiPicker"></div>
+    </div>
+  </div>
+
+  <!-- Overlay chat paneli -->
+  <div class="chat-panel-overlay" id="chatPanelOverlay">
+      <div class="overlay-container">
+          <div class="chat-messages-overlay" id="chatMessagesOverlay">
+              <!-- Mesajlar buraya eklenecek -->
+          </div>
+          <div class="chat-input-area-overlay">
+              <input type="text" class="chat-input" id="chatInputOverlayField" placeholder="Enter'a basarak mesaj yazabilirsiniz">
+              <button class="emoji-button" id="emojiButtonOverlay">
+                  <i class="fa-regular fa-face-smile"></i>
+              </button>
+              <div class="emoji-picker-container" id="emojiPickerOverlay"></div>
+          </div>
+      </div>
+  </div>
+
+  <script src="sync.js"></script>
+</body>
+</html> 
